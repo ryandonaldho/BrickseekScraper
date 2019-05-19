@@ -12,7 +12,7 @@ class Item:
         self.previous_price = previous_price
         self.store_brand = store_brand
         self.image_url = image_url
-        self.discount = round((current_price / previous_price) * 100)
+        self.discount = round((1 - current_price / previous_price) * 100)
 
     def to_document(self):
         return dict(
@@ -34,9 +34,10 @@ chrome_options = Options()
 chrome_options.add_argument("--headless")
 chrome_options.add_argument('--no-sandbox')
 chrome_options.add_argument('--disable-dev-shm-usage')
-# for Ubuntu driver = webdriver.Chrome('/usr/bin/chromedriver',chrome_options=chrome_options)
+# for Ubuntu
+driver = webdriver.Chrome('/usr/bin/chromedriver',chrome_options=chrome_options)
 
-driver = webdriver.Chrome(chrome_options=chrome_options)
+#driver = webdriver.Chrome(chrome_options=chrome_options)
 driver.get("https://brickseek.com/deals/?sort=newest")
 driver.implicitly_wait(3)
 # filter = driver.find_element_by_xpath("//select[@id='banner-sort']/option[@value='newest']").click()
