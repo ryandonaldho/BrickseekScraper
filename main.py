@@ -2,6 +2,33 @@ from brandmapping import id_to_brand
 from selenium import webdriver
 from time import sleep
 from selenium.webdriver.chrome.options import Options
+import atexit
+from pymongo import MongoClient
+
+class Item:
+    def __init__(self, name, current_price, previous_price, store_brand, image_url):
+        self.name = name
+        self.current_price = current_price
+        self.previous_price = previous_price
+        self.store_brand = store_brand
+        self.image_url = image_url
+        self.discount = round((current_price / previous_price) * 100)
+
+    def to_document(self):
+        return dict(
+            name=self.name,
+            current_price=self.current_price,
+            previous_price=self.previous_price,
+            store_brand=self.store_brand,
+            image_url=self.image_url,
+            discount=self.discount
+        )
+
+
+def exit_handler():
+    print('closed ')
+    driver.close()
+
 
 chrome_options = Options()
 chrome_options.add_argument("--headless")
@@ -14,11 +41,16 @@ driver.get("https://brickseek.com/deals/?sort=newest")
 driver.implicitly_wait(3)
 # filter = driver.find_element_by_xpath("//select[@id='banner-sort']/option[@value='newest']").click()
 
+# atexit.register(exit_handler)
+
 # get number of pages
 number_pages = int(driver.find_element_by_class_name('total').text)
 print(number_pages)
 
+items = []
+
 for page in range(1, number_pages + 1):
+    print(page)
     driver.get(f'https://brickseek.com/deals/?sort=newest&pg={page}')
     sleep(2)
     # scrape page
@@ -44,10 +76,21 @@ for page in range(1, number_pages + 1):
         store_brand = id_to_brand[id] if id in id_to_brand else 'none'
 
         # image url
-        image_url = deal.find_element_by_class_name('item-list__image-container')\
+        image_url = deal.find_element_by_class_name('item-list__image-container') \
             .find_element_by_tag_name('img').get_attribute('src')
 
-        format_data = f'{title} {current_price} {previous_price} {store_brand} {image_url}'
-        print(format_data)
+        # format_data = f'{title} {current_price} {previous_price} {store_brand} {image_url}'
+        # print(format_data)
 
+        item = Item(title, current_price, previous_price, store_brand, image_url)
+        items.append(item)
+
+
+client = MongoClient()
+
+client = MongoClient('localhost', 27017)
+db = client['brickseek_test']
+deals = db.deals
+for item in items:
+    deals.update_one({"name": item.name},{"$set": item.to_document()}, upsert=True)
 driver.close()
